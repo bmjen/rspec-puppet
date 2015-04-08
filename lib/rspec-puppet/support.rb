@@ -18,6 +18,7 @@ module RSpec::Puppet
 
       node_name = nodename(type)
 
+      require 'pry'; binding.pry
       catalogue = build_catalog(node_name, facts_hash(node_name), code)
 
       RSpec::Puppet::Coverage.filters << "#{type.to_s.capitalize}[#{self.class.description.capitalize}]"
@@ -164,7 +165,15 @@ module RSpec::Puppet
 
       stub_facts! facts_val
 
-      node_obj = Puppet::Node.new(nodename)
+      base_env_path = File.join(Puppet[:environmentpath], Puppet[:environment])
+
+      node_obj = Puppet::Node.new(nodename,
+                        :environment => Puppet::Node::Environment.create(Puppet[:environment], 
+                                                      [File.join(base_env_path, "modules")],
+                                                      File.join(base_env_path, "manifests")),
+                        :parameters => { 
+                                         "environment" => Puppet[:environment] 
+                                       })
 
       node_obj.merge(facts_val)
 
