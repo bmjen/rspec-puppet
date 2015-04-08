@@ -10,7 +10,7 @@ module RSpec::Puppet
     def load_catalogue(type)
       vardir = setup_puppet
 
-      if Puppet[:parser] == 'future'
+      if Puppet.version.to_f >= 4.0 or Puppet[:parser] == 'future'
         code = [pre_cond, test_manifest(type)].join("\n")
       else
         code = [import_str, pre_cond, test_manifest(type)].join("\n")
@@ -124,25 +124,38 @@ module RSpec::Puppet
       vardir = Dir.mktmpdir
       Puppet[:vardir] = vardir
 
-      [
-        [:modulepath, :module_path],
-        [:manifestdir, :manifest_dir],
-        [:manifest, :manifest],
-        [:templatedir, :template_dir],
-        [:config, :config],
-        [:confdir, :confdir],
-        [:hiera_config, :hiera_config],
-        [:parser, :parser],
-      ].each do |a, b|
+      if Puppet.version.to_f >= 4.0
+        settings = [
+          [:environmentpath, :environmentpath],
+          [:environment, :environment],
+          #[:config, :config],
+          #[:confdir, :confdir],
+          #[:hiera_config, :hiera_config],
+          #[:parser, :parser],
+        ]
+      else
+        settings = [
+          [:modulepath, :module_path],
+          [:manifestdir, :manifest_dir],
+          [:manifest, :manifest],
+          [:templatedir, :template_dir],
+          [:config, :config],
+          [:confdir, :confdir],
+          [:hiera_config, :hiera_config],
+          [:parser, :parser],
+        ]
+      end
+      settings.each do |a,b|
         value = self.respond_to?(b) ? self.send(b) : RSpec.configuration.send(b)
         begin
           Puppet[a] = value
         rescue ArgumentError
+          puts "caught error"
           Puppet.settings.setdefaults(:main, {a => {:default => value, :desc => a.to_s}})
         end
       end
 
-      Puppet[:libdir] = Dir["#{Puppet[:modulepath]}/*/lib"].entries.join(File::PATH_SEPARATOR)
+#      Puppet[:libdir] = Dir["#{Puppet[:modulepath]}/*/lib"].entries.join(File::PATH_SEPARATOR)
       vardir
     end
 
@@ -158,6 +171,9 @@ module RSpec::Puppet
       # trying to be compatible with 2.7 as well as 2.6
       if Puppet::Resource::Catalog.respond_to? :find
         Puppet::Resource::Catalog.find(node_obj.name, :use_node => node_obj)
+      elsif Puppet.version.to_f >= 4.0
+        require'pry';binding.pry
+        Puppet::Resource::Catalog.indirection.find(node_obj.name, :use_node => node_obj)
       else
         Puppet::Resource::Catalog.indirection.find(node_obj.name, :use_node => node_obj)
       end

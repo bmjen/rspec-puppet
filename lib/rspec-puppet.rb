@@ -14,6 +14,8 @@ rescue LoadError
 end
 
 RSpec.configure do |c|
+  c.add_setting :environmentpath, :default => 'spec'
+  c.add_setting :environment, :default => 'fixtures'
   c.add_setting :module_path, :default => '/etc/puppet/modules'
   c.add_setting :manifest_dir, :default => nil
   c.add_setting :manifest, :default => nil
